@@ -77,11 +77,28 @@ async function handleAdmin(request, env, corsHeaders) {
       });
     }
 
-    // Add / Update (Partial update supported)
+    // Add / Update / Alias
     if (request.method === "POST") {
-      const data = await request.json(); // { shop, status, key, created }
+      const data = await request.json(); // { shop, status, key, created, action, target }
       
-      // Fetch existing data for merge
+      // Handle Alias Creation
+      if (data.action === "add_alias") {
+        if (!data.shop || !data.target) {
+          return new Response(JSON.stringify({ error: "Missing shop or target for alias" }), { 
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          });
+        }
+        await env.LICENSES.put(data.shop, JSON.stringify({ 
+          type: "alias", 
+          target: data.target,
+          created: new Date().toISOString()
+        }));
+        return new Response(JSON.stringify({ success: true, message: "Alias added" }), { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
+      // Default: Add/Update Primary License
       const existingRaw = await env.LICENSES.get(data.shop);
       let existing = existingRaw ? JSON.parse(existingRaw) : {};
 
@@ -169,12 +186,22 @@ async function handleValidation(request, env, corsHeaders) {
       }, 201);
     }
 
-    // 5. KV License Check (Strict Whitelist)
-    // Every shop must be in the KV database and have 'active' status
+    // 5. KV License Check (Strict Whitelist + Alias Support)
     if (env.LICENSES) {
-      const stored = await env.LICENSES.get(shop);
+      let stored = await env.LICENSES.get(shop);
       
-      // 1. If not found at all, it's an unregistered/deleted shop
+      // 1. Check if this is an Alias (Pointer)
+      if (stored) {
+        const data = JSON.parse(stored);
+        if (data.type === 'alias' && data.target) {
+          // Resolve to the target primary domain
+          console.log(`Resolving alias: ${shop} -> ${data.target}`);
+          shop = data.target; 
+          stored = await env.LICENSES.get(shop);
+        }
+      }
+
+      // 2. If not found at all, it's an unregistered/deleted shop
       if (!stored) {
         return jsonResponse({
           "b": "body",
@@ -182,7 +209,7 @@ async function handleValidation(request, env, corsHeaders) {
         }, 201);
       }
 
-      // 2. If found, check the status
+      // 3. If found, check the status
       const licenseData = JSON.parse(stored);
       if (licenseData.status !== 'active') {
         const reason = licenseData.status === 'revoked' 

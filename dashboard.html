@@ -219,9 +219,8 @@
                     </td>
                     <td class="py-4 px-4 text-center">
                         <div class="flex justify-center gap-2">
-                             <button onclick="copyToClipboard('${lic.key}')" title="Copy License Key" class="text-xs bg-white text-black font-bold px-3 py-1.5 rounded hover:bg-gray-200 transition-all">
-                                Copy
-                            </button>
+                            <button onclick="copyToClipboard('${lic.key}')" title="Copy License Key" class="text-xs bg-white text-black font-bold px-3 py-1.5 rounded hover:bg-gray-200 transition-all">Copy</button>
+                            <button onclick="addAlias('${lic.shop}')" title="Link Custom Domain" class="text-xs bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1.5 rounded transition-all">Alias</button>
                             <button onclick="toggleStatus('${lic.shop}', '${lic.status}')" class="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded transition-all">
                                 ${lic.status === 'active' ? 'Revoke' : 'Activate'}
                             </button>
@@ -300,6 +299,34 @@
             const text = key || document.getElementById('generatedKeyDisplay').innerText;
             if (!text) return;
             navigator.clipboard.writeText(text).then(() => alert('Key copied to clipboard!'));
+        }
+
+        async function addAlias(primaryShop) {
+            const aliasShop = prompt(`Enter custom domain for ${primaryShop}: (e.g. astranovah.com)`);
+            if (!aliasShop) return;
+
+            try {
+                const res = await fetch(`${API_URL}/api/admin/licenses`, {
+                    method: 'POST',
+                    headers: { 'Authorization': authToken, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'add_alias', 
+                        shop: aliasShop.trim().toLowerCase(), 
+                        target: primaryShop 
+                    })
+                });
+                
+                if (res.ok) {
+                    alert(`Custom domain ${aliasShop} linked to ${primaryShop}!`);
+                    fetchLicenses();
+                } else {
+                    const error = await res.json();
+                    alert(`Error: ${error.error}`);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection error');
+            }
         }
     </script>
 </body>
