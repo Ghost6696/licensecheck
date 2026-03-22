@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shrine License Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.5.24/jsrsasign-all-min.js"></script>
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); }
+        body { background: #0f172a; color: white; font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="p-8">
+    <div class="max-w-4xl mx-auto">
+        <header class="flex justify-between items-center mb-12">
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">
+                Shrine License Manager
+            </h1>
+            <div id="status" class="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                System Ready
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Generator Section -->
+            <section class="glass p-6 rounded-2xl border border-white/10 shadow-2xl">
+                <h2 class="text-xl font-semibold mb-6 flex items-center">
+                    <span class="mr-2">🔑</span> Generate License
+                </h2>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Shop Domain</label>
+                        <input type="text" id="shopDomain" placeholder="example.myshopify.com" 
+                               class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Private Key (PEM format)</label>
+                        <textarea id="privateKey" placeholder="-----BEGIN PRIVATE KEY-----..." 
+                                  class="w-full bg-slate-800 border border-white/10 rounded-lg px-4 py-2 h-32 text-xs font-mono focus:ring-2 focus:ring-blue-500 outline-none transition-all"></textarea>
+                        <p class="text-[10px] text-gray-500 mt-1 italic">Your key stays in the browser and is never uploaded.</p>
+                    </div>
+
+                    <button onclick="generateLicense()" 
+                            class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-3 rounded-lg shadow-lg transform active:scale-95 transition-all">
+                        Generate Key (256-byte RSA)
+                    </button>
+                </div>
+            </section>
+
+            <!-- Result Section -->
+            <section class="glass p-6 rounded-2xl border border-white/10 shadow-2xl flex flex-col">
+                <h2 class="text-xl font-semibold mb-6 flex items-center">
+                    <span class="mr-2">📜</span> Generated Key
+                </h2>
+                
+                <div id="resultBox" class="flex-grow hidden">
+                    <div class="bg-black/40 rounded-xl p-4 mb-4 font-mono text-xs break-all border border-blue-500/20 text-blue-300" id="generatedKeyDisplay"></div>
+                    <button onclick="copyToClipboard()" class="text-sm text-blue-400 hover:text-blue-300 flex items-center transition-colors">
+                        <span class="mr-1">📋</span> Click to copy
+                    </button>
+                    <div class="mt-4 p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs">
+                        <strong>Next Step:</strong> Paste this key into the Shrine theme settings for the specified shop.
+                    </div>
+                </div>
+
+                <div id="emptyState" class="flex-grow flex items-center justify-center text-gray-500 italic text-sm">
+                    Generate a key to see results here.
+                </div>
+            </section>
+        </div>
+
+        <!-- History/Storage Section -->
+        <section class="mt-12 glass p-6 rounded-2xl border border-white/10 shadow-2xl">
+            <h2 class="text-xl font-semibold mb-6 flex items-center">
+                <span class="mr-2">📊</span> License History
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="text-gray-400 border-b border-white/5">
+                            <th class="pb-3 px-4">Shop Domain</th>
+                            <th class="pb-3 px-4">Created</th>
+                            <th class="pb-3 px-4 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="licenseTable">
+                        <tr class="text-gray-500 italic">
+                            <td colspan="3" class="py-12 text-center">No licenses recorded yet.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-[10px] text-gray-500 mt-4 italic">Note: To save history, manually add the generated keys to <code>licenses.json</code> and push to GitHub.</p>
+        </section>
+    </div>
+
+    <script>
+        function generateLicense() {
+            const shop = document.getElementById('shopDomain').value.trim();
+            const pem = document.getElementById('privateKey').value.trim();
+
+            if (!shop || !pem) {
+                alert('Please provide both shop domain and private key.');
+                return;
+            }
+
+            try {
+                // Initialize signing
+                const sig = new KJUR.crypto.Signature({"alg": "SHA256withRSA"});
+                sig.init(pem);
+                sig.updateString(shop);
+                const sigValueHex = sig.sign();
+                
+                // Convert hex to Base64
+                const sigValueBase64 = hextob64(sigValueHex);
+
+                // UI Updates
+                document.getElementById('emptyState').classList.add('hidden');
+                document.getElementById('resultBox').classList.remove('hidden');
+                document.getElementById('generatedKeyDisplay').innerText = sigValueBase64;
+                
+                // Add to table (temporary local view)
+                const table = document.getElementById('licenseTable');
+                if (table.innerHTML.includes('No licenses recorded yet')) table.innerHTML = '';
+                
+                const newRow = `
+                    <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td class="py-4 px-4 font-medium text-blue-400">${shop}</td>
+                        <td class="py-4 px-4 text-gray-400">${new Date().toLocaleDateString()}</td>
+                        <td class="py-4 px-4 text-center">
+                            <button class="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded transition-colors" onclick="navigator.clipboard.writeText('${sigValueBase64}')">Copy Key</button>
+                        </td>
+                    </tr>
+                `;
+                table.innerHTML = newRow + table.innerHTML;
+
+            } catch (err) {
+                console.error(err);
+                alert('Generation failed! Check if your Private Key is correct (PEM format).');
+            }
+        }
+
+        function copyToClipboard() {
+            const text = document.getElementById('generatedKeyDisplay').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Key copied to clipboard!');
+            });
+        }
+    </script>
+</body>
+</html>
