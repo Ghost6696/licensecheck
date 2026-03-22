@@ -138,13 +138,13 @@ function getBlockHtml(reason) {
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       :root {
-        --primary: #000000;
+        --primary: #ffffff;
         --accent: #ff3e3e;
-        --bg: #0a0a0c;
-        --card-bg: rgba(255, 255, 255, 0.03);
+        --bg: #000000;
+        --card-bg: #111111;
         --text-main: #ffffff;
-        --text-muted: #94a3b8;
-        --border: rgba(255, 255, 255, 0.08);
+        --text-muted: #a1a1aa;
+        --border: #27272a;
       }
 
       * {
@@ -161,117 +161,112 @@ function getBlockHtml(reason) {
         justify-content: center;
         align-items: center;
         min-height: 100vh;
-        overflow: hidden;
-      }
-
-      /* Animated Background */
-      .bg-glow {
-        position: fixed;
-        width: 100vw;
-        height: 100vh;
-        z-index: -1;
-        background: 
-          radial-gradient(circle at 20% 20%, rgba(255, 62, 62, 0.05) 0%, transparent 40%),
-          radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.02) 0%, transparent 40%);
+        padding: 20px;
       }
 
       .container {
-        position: relative;
-        max-width: 520px;
-        width: 90%;
-        padding: 3.5rem;
+        max-width: 480px;
+        width: 100%;
+        padding: 4rem 3rem;
         background: var(--card-bg);
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
         border: 1px solid var(--border);
-        border-radius: 40px;
+        border-radius: 48px;
         text-align: center;
-        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        animation: reveal 1s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8), 0 0 80px -40px var(--accent);
+        animation: reveal 1.2s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
       @keyframes reveal {
-        from { opacity: 0; transform: scale(0.95) translateY(20px); }
-        to { opacity: 1; transform: scale(1) translateY(0); }
+        from { opacity: 0; transform: translateY(40px) scale(0.9); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      .logo-container {
+        background: #ffffff;
+        padding: 1.5rem;
+        border-radius: 24px;
+        display: inline-block;
+        margin-bottom: 3rem;
       }
 
       .logo {
-        width: 140px;
-        margin-bottom: 2.5rem;
-        filter: brightness(0) invert(1);
-        opacity: 0.9;
+        width: 120px;
+        display: block;
       }
 
       .badge {
         display: inline-flex;
         align-items: center;
-        padding: 0.6rem 1.2rem;
+        padding: 0.75rem 1.5rem;
         background: rgba(255, 62, 62, 0.1);
-        color: #ff5f5f;
-        font-size: 0.7rem;
+        color: var(--accent);
+        font-size: 0.75rem;
         font-weight: 800;
         border-radius: 100px;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-        margin-bottom: 1.5rem;
+        letter-spacing: 0.15em;
+        margin-bottom: 2rem;
         border: 1px solid rgba(255, 62, 62, 0.2);
       }
 
       h1 {
-        font-size: 2.25rem;
-        font-weight: 800;
-        margin-bottom: 1rem;
-        letter-spacing: -0.03em;
-        background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        font-size: 2.5rem;
+        font-weight: 850;
+        margin-bottom: 1.5rem;
+        letter-spacing: -0.04em;
+        line-height: 1.1;
       }
 
       p {
-        font-size: 1.05rem;
+        font-size: 1.1rem;
         line-height: 1.6;
         color: var(--text-muted);
-        margin-bottom: 2.5rem;
+        margin-bottom: 3rem;
       }
 
       .reason-box {
-        background: rgba(255, 255, 255, 0.02);
+        background: #18181b;
         border: 1px solid var(--border);
-        border-radius: 20px;
-        padding: 1.5rem;
-        margin-bottom: 2.5rem;
+        border-radius: 24px;
+        padding: 1.75rem;
+        margin-bottom: 3rem;
         text-align: left;
       }
 
       .reason-label {
-        font-size: 0.65rem;
+        font-size: 0.7rem;
         font-weight: 800;
-        color: #64748b;
+        color: #52525b;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.5rem;
+        letter-spacing: 0.1em;
+        margin-bottom: 0.75rem;
       }
 
       .reason-content {
-        font-size: 0.95rem;
-        color: #cbd5e1;
+        font-size: 1rem;
+        color: #e4e4e7;
         font-weight: 500;
         line-height: 1.5;
+        font-family: monospace;
+        word-break: break-all;
       }
 
       .actions {
         display: flex;
         flex-direction: column;
-        gap: 1rem;
+        gap: 1.25rem;
       }
 
       .btn {
-        display: block;
-        padding: 1.1rem;
-        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 1.25rem;
+        border-radius: 20px;
         text-decoration: none;
-        font-weight: 700;
-        font-size: 0.95rem;
+        font-weight: 750;
+        font-size: 1rem;
         transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         cursor: pointer;
       }
@@ -279,43 +274,66 @@ function getBlockHtml(reason) {
       .btn-primary {
         background: #ffffff;
         color: #000000;
-        box-shadow: 0 10px 20px -5px rgba(255, 255, 255, 0.1);
+        box-shadow: 0 10px 30px -10px rgba(255, 255, 255, 0.3);
       }
 
       .btn-primary:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 20px 30px -10px rgba(255, 255, 255, 0.2);
+        transform: translateY(-4px);
+        box-shadow: 0 25px 50px -15px rgba(255, 255, 255, 0.4);
         background: #f8fafc;
       }
 
+      .btn-discord {
+        background: #5865F2;
+        color: #ffffff;
+      }
+
+      .btn-discord:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 25px 50px -15px rgba(88, 101, 242, 0.4);
+        background: #4752c4;
+      }
+
+      .discord-tag {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-top: 1rem;
+      }
+
       @media (max-width: 480px) {
-        .container { padding: 2.5rem 1.5rem; }
-        h1 { font-size: 1.75rem; }
+        .container { padding: 3rem 1.5rem; }
+        h1 { font-size: 2rem; }
       }
     </style>
   </head>
   <body>
-    <div class="bg-glow"></div>
     <div class="container">
-      <img src="https://cdn.shrinetheme.com/Full_Logo_Transparent.png" alt="Shrine" class="logo">
+      <div class="logo-container">
+        <img src="https://cdn.shrinetheme.com/Full_Logo_Transparent.png" alt="Shrine" class="logo">
+      </div>
       
       <div class="badge">Security Verification</div>
       
-      <h1>Unauthorized Axis</h1>
-      <p>This theme instance is currently restricted. A valid activation token is required to unlock premium features.</p>
+      <h1>Unauthorized Instance</h1>
+      <p>This theme requires a valid license key. Premium features are locked until activation is verified.</p>
 
       <div class="reason-box">
-        <div class="reason-label">Restriction Details</div>
+        <div class="reason-label">System Logs</div>
         <div class="reason-content">${reason}</div>
       </div>
 
       <div class="actions">
-        <a href="https://github.com/Ghost6696/licensecheck" class="btn btn-primary">Contact Support</a>
+        <a href="https://discord.com" class="btn btn-discord">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.946-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+          Support on Discord
+        </a>
+        <div class="discord-tag">Username: <strong>ghost968986</strong></div>
       </div>
     </div>
   </body>
   </html>`;
 }
+
 
 
 async function importPublicKey(pem) {
