@@ -219,6 +219,9 @@
                     </td>
                     <td class="py-4 px-4 text-center">
                         <div class="flex justify-center gap-2">
+                             <button onclick="copyToClipboard('${lic.key}')" title="Copy License Key" class="text-xs bg-white text-black font-bold px-3 py-1.5 rounded hover:bg-gray-200 transition-all">
+                                Copy
+                            </button>
                             <button onclick="toggleStatus('${lic.shop}', '${lic.status}')" class="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded transition-all">
                                 ${lic.status === 'active' ? 'Revoke' : 'Activate'}
                             </button>
@@ -293,9 +296,10 @@
             document.getElementById('resultModal').classList.add('hidden');
         }
 
-        function copyToClipboard() {
-            const text = document.getElementById('generatedKeyDisplay').innerText;
-            navigator.clipboard.writeText(text).then(() => alert('Copied!'));
+        function copyToClipboard(key) {
+            const text = key || document.getElementById('generatedKeyDisplay').innerText;
+            if (!text) return;
+            navigator.clipboard.writeText(text).then(() => alert('Key copied to clipboard!'));
         }
     </script>
 </body>

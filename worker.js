@@ -77,14 +77,21 @@ async function handleAdmin(request, env, corsHeaders) {
       });
     }
 
-    // Add / Update
+    // Add / Update (Partial update supported)
     if (request.method === "POST") {
       const data = await request.json(); // { shop, status, key, created }
-      await env.LICENSES.put(data.shop, JSON.stringify({
-        status: data.status || "active",
-        key: data.key,
-        created: data.created || new Date().toISOString()
-      }));
+      
+      // Fetch existing data for merge
+      const existingRaw = await env.LICENSES.get(data.shop);
+      let existing = existingRaw ? JSON.parse(existingRaw) : {};
+
+      const updated = {
+        status: data.status || existing.status || "active",
+        key: data.key || existing.key || "",
+        created: data.created || existing.created || new Date().toISOString()
+      };
+
+      await env.LICENSES.put(data.shop, JSON.stringify(updated));
       return new Response(JSON.stringify({ success: true }), { 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
