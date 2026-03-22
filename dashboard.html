@@ -245,7 +245,7 @@
         }
 
         async function deleteLicense(shop) {
-            if (!confirm(`Permanently delete record for ${shop}? This won't stop the client if they have the key, but it removes it from memory.`)) return;
+            if (!confirm(`Permanently cancel access for ${shop}? \n\nThis will FULLY DELETE the record and immediately BLOCK the client from using the theme.`)) return;
 
             await fetch(`${API_URL}/api/admin/licenses`, {
                 method: 'DELETE',

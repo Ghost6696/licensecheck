@@ -169,18 +169,30 @@ async function handleValidation(request, env, corsHeaders) {
       }, 201);
     }
 
-    // 5. KV Revocation Check
-    // If KV is configured, check if the shop is revoked
+    // 5. KV License Check (Strict Whitelist)
+    // Every shop must be in the KV database and have 'active' status
     if (env.LICENSES) {
       const stored = await env.LICENSES.get(shop);
-      if (stored) {
-        const licenseData = JSON.parse(stored);
-        if (licenseData.status === 'revoked') {
-          return jsonResponse({
-            "b": "body",
-            "h": getBlockHtml("License Revoked - This theme instance has been deactivated by the developer.", "Deactivated")
-          }, 201);
-        }
+      
+      // 1. If not found at all, it's an unregistered/deleted shop
+      if (!stored) {
+        return jsonResponse({
+          "b": "body",
+          "h": getBlockHtml("Unregistered Instance - This shop domain is not found in our license database. Please contact support.", "Unregistered")
+        }, 201);
+      }
+
+      // 2. If found, check the status
+      const licenseData = JSON.parse(stored);
+      if (licenseData.status !== 'active') {
+        const reason = licenseData.status === 'revoked' 
+          ? "License Revoked - This theme instance has been deactivated by the developer." 
+          : "License Inactive - This license is no longer valid.";
+          
+        return jsonResponse({
+          "b": "body",
+          "h": getBlockHtml(reason, "Deactivated")
+        }, 201);
       }
     }
 
