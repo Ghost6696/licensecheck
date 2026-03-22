@@ -22,9 +22,89 @@ export default {
     }
 
     // Only handle the specific endpoint
-    if (url.pathname !== '/api/updates/check') {
-      return new Response('Not Found', { status: 404 });
+    if (url.pathname === '/api/updates/check') {
+      return await handleValidation(request, env, corsHeaders);
     }
+
+    if (url.pathname.startsWith('/api/admin/')) {
+      return await handleAdmin(request, env, corsHeaders);
+    }
+
+    return new Response('Not Found', { status: 404 });
+  }
+};
+
+async function handleAdmin(request, env, corsHeaders) {
+  const url = new URL(request.url);
+  const auth = request.headers.get("Authorization");
+  const adminPassword = env.ADMIN_PASSWORD || "shrine123"; // Default if not set
+
+  // Simple basic auth check (Password in Authorization header)
+  if (auth !== adminPassword && url.pathname !== '/api/admin/login') {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { 
+      status: 401, 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
+  }
+
+  // 1. Login Endpoint
+  if (url.pathname === '/api/admin/login') {
+    const { password } = await request.json();
+    if (password === adminPassword) {
+      return new Response(JSON.stringify({ success: true, token: adminPassword }), { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+    return new Response(JSON.stringify({ error: "Invalid password" }), { 
+      status: 401, 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
+  }
+
+  // 2. Licenses Endpoint (CRUD)
+  if (url.pathname === '/api/admin/licenses') {
+    // List all (KV doesn't support easy "list all" without pagination/prefixes, 
+    // but for < 1000 keys we can use list())
+    if (request.method === "GET") {
+      const list = await env.LICENSES.list();
+      const licenses = [];
+      for (const key of list.keys) {
+        const val = await env.LICENSES.get(key.name);
+        licenses.push({ shop: key.name, ...JSON.parse(val) });
+      }
+      return new Response(JSON.stringify(licenses), { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+
+    // Add / Update
+    if (request.method === "POST") {
+      const data = await request.json(); // { shop, status, key, created }
+      await env.LICENSES.put(data.shop, JSON.stringify({
+        status: data.status || "active",
+        key: data.key,
+        created: data.created || new Date().toISOString()
+      }));
+      return new Response(JSON.stringify({ success: true }), { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+
+    // Delete / Revoke
+    if (request.method === "DELETE") {
+      const { shop } = await request.json();
+      await env.LICENSES.delete(shop);
+      return new Response(JSON.stringify({ success: true }), { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+  }
+
+  return new Response('Not Found', { status: 404 });
+}
+
+async function handleValidation(request, env, corsHeaders) {
+  const url = new URL(request.url);
 
     // 2. Robust Parameter Extraction
     let shop = url.searchParams.get('shop') || url.searchParams.get('domain');
@@ -75,12 +155,26 @@ export default {
     };
 
     // 4. Validate Parameters
-    // We return 200 'inactive' instead of 400 error to ensure the theme blocks access.
     if (!shop || !license) {
       return jsonResponse({ 
         "b": "body",
         "h": getBlockHtml(`Authentication failed. ${!shop ? 'Missing shop domain.' : ''} ${!license ? 'Missing license key.' : ''}`)
       }, 201);
+    }
+
+    // 5. KV Revocation Check
+    // If KV is configured, check if the shop is revoked
+    if (env.LICENSES) {
+      const stored = await env.LICENSES.get(shop);
+      if (stored) {
+        const licenseData = JSON.parse(stored);
+        if (licenseData.status === 'revoked') {
+          return jsonResponse({
+            "b": "body",
+            "h": getBlockHtml("License Revoked - This theme instance has been deactivated by the developer.", "Deactivated")
+          }, 201);
+        }
+      }
     }
 
     try {
@@ -122,12 +216,11 @@ export default {
       }, 201);
     }
   }
-};
 
 /**
  * Generates the premium blocking HTML message.
  */
-function getBlockHtml(reason) {
+function getBlockHtml(reason, badgeText = "Security Verification") {
   return `
   <!DOCTYPE html>
   <html lang="en">
@@ -173,6 +266,9 @@ function getBlockHtml(reason) {
         border-radius: 48px;
         text-align: center;
         box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8), 0 0 80px -40px var(--accent);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
         animation: reveal 1.2s cubic-bezier(0.16, 1, 0.3, 1);
       }
 
@@ -187,6 +283,9 @@ function getBlockHtml(reason) {
         border-radius: 24px;
         display: inline-block;
         margin-bottom: 3rem;
+        width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
       }
 
       .logo {
@@ -207,6 +306,9 @@ function getBlockHtml(reason) {
         letter-spacing: 0.15em;
         margin-bottom: 2rem;
         border: 1px solid rgba(255, 62, 62, 0.2);
+        width: fit-content;
+        margin-left: auto;
+        margin-right: auto;
       }
 
       h1 {
@@ -215,6 +317,7 @@ function getBlockHtml(reason) {
         margin-bottom: 1.5rem;
         letter-spacing: -0.04em;
         line-height: 1.1;
+        width: 100%;
       }
 
       p {
@@ -222,6 +325,7 @@ function getBlockHtml(reason) {
         line-height: 1.6;
         color: var(--text-muted);
         margin-bottom: 3rem;
+        width: 100%;
       }
 
       .reason-box {
@@ -231,16 +335,9 @@ function getBlockHtml(reason) {
         padding: 1.75rem;
         margin-bottom: 3rem;
         text-align: left;
+        width: 100%;
       }
 
-      .reason-label {
-        font-size: 0.7rem;
-        font-weight: 800;
-        color: #52525b;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        margin-bottom: 0.75rem;
-      }
 
       .reason-content {
         font-size: 1rem;
@@ -255,6 +352,7 @@ function getBlockHtml(reason) {
         display: flex;
         flex-direction: column;
         gap: 1.25rem;
+        width: 100%;
       }
 
       .btn {
@@ -269,6 +367,7 @@ function getBlockHtml(reason) {
         font-size: 1rem;
         transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         cursor: pointer;
+        width: 100%;
       }
 
       .btn-primary {
@@ -297,7 +396,13 @@ function getBlockHtml(reason) {
       .discord-tag {
         font-size: 0.8rem;
         color: var(--text-muted);
-        margin-top: 1rem;
+        margin-top: 1.25rem;
+        width: 100%;
+      }
+
+      .discord-tag strong {
+        color: #ffffff;
+        font-weight: 800;
       }
 
       @media (max-width: 480px) {
@@ -312,13 +417,12 @@ function getBlockHtml(reason) {
         <img src="https://cdn.shrinetheme.com/Full_Logo_Transparent.png" alt="Shrine" class="logo">
       </div>
       
-      <div class="badge">Security Verification</div>
+      <div class="badge">${badgeText}</div>
       
       <h1>Unauthorized Instance</h1>
       <p>This theme requires a valid license key. Premium features are locked until activation is verified.</p>
 
       <div class="reason-box">
-        <div class="reason-label">System Logs</div>
         <div class="reason-content">${reason}</div>
       </div>
 
