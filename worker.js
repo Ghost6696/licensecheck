@@ -113,6 +113,16 @@ async function handleAdmin(request, env, corsHeaders) {
         };
 
         await env.LICENSES.put(data.shop, JSON.stringify(updated));
+
+        // Create optional alias if provided
+        if (data.alias) {
+          await env.LICENSES.put(data.alias.toLowerCase().trim(), JSON.stringify({
+            type: "alias",
+            target: data.shop,
+            created: new Date().toISOString()
+          }));
+        }
+
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });

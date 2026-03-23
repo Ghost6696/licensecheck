@@ -76,6 +76,12 @@
                     </div>
 
                     <div>
+                        <label class="block text-sm text-gray-400 mb-1">Alias Domain (Optional)</label>
+                        <input type="text" id="aliasDomain" placeholder="customdomain.com"
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+
+                    <div>
                         <label class="block text-sm text-gray-400 mb-1">Private Key (Stored Locally)</label>
                         <textarea id="privateKey" placeholder="-----BEGIN PRIVATE KEY-----..."
                             class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 h-32 text-xs font-mono"></textarea>
@@ -267,6 +273,7 @@
 
         async function generateLicense() {
             const shop = document.getElementById('shopDomain').value.trim();
+            const alias = document.getElementById('aliasDomain').value.trim();
             const pem = document.getElementById('privateKey').value.trim();
 
             if (!shop || !pem) return alert('Fill domain and key');
@@ -284,6 +291,7 @@
                     headers: { 'Authorization': authToken, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         shop,
+                        alias,
                         key: sigValueBase64,
                         created: new Date().toISOString()
                     })
