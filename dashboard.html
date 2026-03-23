@@ -53,6 +53,12 @@
                 <p class="text-gray-500 text-sm mt-1">Cloudflare KV Edition</p>
             </div>
             <div class="flex items-center gap-4">
+                <button onclick="showAdminKeys()" id="adminKeysBtn" class="px-4 py-2 rounded-xl bg-purple-600/20 text-purple-400 border border-purple-500/30 text-xs font-bold hover:bg-purple-600/30 transition-all">
+                    Admin Keys
+                </button>
+                <button onclick="hideAdminKeys()" id="backBtn" class="hidden px-4 py-2 rounded-xl bg-white/10 text-white border border-white/10 text-xs font-bold hover:bg-white/20 transition-all">
+                    ← Back to Dashboard
+                </button>
                 <div id="status"
                     class="px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
                     System Connected
@@ -61,41 +67,45 @@
             </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Generator Section -->
-            <section class="glass p-6 rounded-2xl border border-white/10 lg:col-span-1">
-                <h2 class="text-xl font-semibold mb-6 flex items-center">
-                    <span class="mr-2">🔑</span> Generate License
+        <!-- Global Private Key Section (Always Visible) -->
+        <section class="glass p-6 rounded-2xl border border-white/10 mb-8 border-blue-500/20">
+             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                <h2 class="text-lg font-semibold flex items-center">
+                    <span class="mr-2">🛠️</span> Master Configuration
                 </h2>
+                <span class="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Stored Locally in Browser Only</span>
+             </div>
+             <div>
+                <textarea id="privateKey" placeholder="-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ..."
+                    class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 h-24 text-xs font-mono focus:ring-1 focus:ring-blue-500 outline-none text-blue-300 placeholder:text-gray-700"></textarea>
+             </div>
+        </section>
 
-                <div class="space-y-4">
+        <!-- Main Dashboard View (Default) -->
+        <div id="indexView" class="space-y-8">
+            <!-- Generator Section -->
+            <section class="glass p-6 rounded-2xl border border-white/10 flex flex-col md:flex-row items-end gap-4 border-blue-500/10">
+                <div class="flex-grow grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm text-gray-400 mb-1">Shop Domain</label>
+                        <label class="block text-sm text-gray-400 mb-1 text-xs">Shop Domain</label>
                         <input type="text" id="shopDomain" placeholder="example.myshopify.com"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
-
                     <div>
-                        <label class="block text-sm text-gray-400 mb-1">Alias Domain (Optional)</label>
+                        <label class="block text-sm text-gray-400 mb-1 text-xs">Alias Domain (Optional)</label>
                         <input type="text" id="aliasDomain" placeholder="customdomain.com"
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
-
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-1">Private Key (Stored Locally)</label>
-                        <textarea id="privateKey" placeholder="-----BEGIN PRIVATE KEY-----..."
-                            class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 h-32 text-xs font-mono"></textarea>
-                    </div>
-
-                    <button onclick="generateLicense()"
-                        class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-all shadow-lg shadow-blue-600/20">
-                        Generate & Save
-                    </button>
                 </div>
+                <button onclick="generateLicense()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-8 rounded-lg transition-all shadow-lg shadow-blue-600/20 whitespace-nowrap">
+                    Generate & Save
+                </button>
             </section>
 
             <!-- Table Section -->
-            <section class="glass p-6 rounded-2xl border border-white/10 lg:col-span-2 overflow-hidden flex flex-col">
+            <section class="glass p-6 rounded-2xl border border-white/10 overflow-hidden flex flex-col">
                 <h2 class="text-xl font-semibold mb-6 flex items-center">
                     <span class="mr-2">📊</span> Active Licenses
                 </h2>
@@ -112,6 +122,46 @@
                         <tbody id="licenseTable">
                             <tr>
                                 <td colspan="3" class="py-12 text-center text-gray-500 italic">Loading licenses...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- Admin Keys View (Hidden) -->
+        <div id="adminKeysView" class="hidden space-y-8">
+            <!-- Generator Section -->
+            <section class="glass p-6 rounded-2xl border border-white/10 flex flex-col md:flex-row items-end gap-4 border-purple-500/10">
+                <div class="flex-grow">
+                    <label class="block text-sm text-gray-400 mb-1 text-xs">Admin Key Name (e.g. Support Master)</label>
+                    <input type="text" id="adminKeyName" placeholder="e.g. Master Key - John Doe"
+                        class="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500 outline-none">
+                </div>
+                <button onclick="generateAdminKey()"
+                    class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-8 rounded-lg transition-all shadow-lg shadow-purple-600/20 whitespace-nowrap">
+                    Generate Admin Key
+                </button>
+            </section>
+
+            <!-- Admin Table Section -->
+            <section class="glass p-6 rounded-2xl border border-white/10 overflow-hidden flex flex-col">
+                <h2 class="text-xl font-semibold mb-6 flex items-center">
+                    <span class="mr-2">👑</span> Master Admin Keys
+                </h2>
+
+                <div class="overflow-x-auto flex-grow">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="text-gray-400 border-b border-white/5">
+                                <th class="pb-3 px-4">Name</th>
+                                <th class="pb-3 px-4">Status</th>
+                                <th class="pb-3 px-4 text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminKeyTable">
+                            <tr>
+                                <td colspan="3" class="py-12 text-center text-gray-500 italic">No admin keys found.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -142,6 +192,7 @@
     <script>
         let authToken = localStorage.getItem('shrine_token');
         const API_URL = 'https://shrine-auther.fantoma.workers.dev'; // Leave blank if hosted on same domain as worker
+
 
         // Init
         if (authToken) {
@@ -273,7 +324,7 @@
                                     ${lic.status === 'active' ? 'Revoke' : 'Activate'}
                                 </button>
                             ` : `
-                                <span class="text-[10px] text-gray-700 italic px-2 py-1.5 bg-white/5 rounded min-w-[170px] inline-block text-center">Managed via Primary</span>
+                                <span class="text-[10px] text-white italic px-2 py-1.5 bg-white/5 rounded min-w-[170px] inline-block text-center">Managed via Primary</span>
                             `}
                             <button onclick="deleteLicense('${lic.shop}')" class="text-xs text-red-500 hover:text-red-400 px-3 py-1.5 rounded transition-colors">Delete</button>
                         </div>
@@ -380,6 +431,130 @@
                 console.error(err);
                 alert('Connection error');
             }
+        }
+
+        // --- Admin Keys Logic ---
+
+        function showAdminKeys() {
+            document.getElementById('indexView').classList.add('hidden');
+            document.getElementById('adminKeysBtn').classList.add('hidden');
+            document.getElementById('adminKeysView').classList.remove('hidden');
+            document.getElementById('backBtn').classList.remove('hidden');
+            fetchAdminKeys();
+        }
+
+        function hideAdminKeys() {
+            document.getElementById('indexView').classList.remove('hidden');
+            document.getElementById('adminKeysBtn').classList.remove('hidden');
+            document.getElementById('adminKeysView').classList.add('hidden');
+            document.getElementById('backBtn').classList.add('hidden');
+            fetchLicenses();
+        }
+
+        async function fetchAdminKeys() {
+            try {
+                const res = await fetch(`${API_URL}/api/admin/admin-keys`, {
+                    headers: { 'Authorization': authToken }
+                });
+                const keys = await res.json();
+                renderAdminKeys(keys);
+            } catch (e) {
+                console.error('Failed to fetch admin keys');
+            }
+        }
+
+        function renderAdminKeys(keys) {
+            const table = document.getElementById('adminKeyTable');
+            if (!keys || keys.length === 0) {
+                table.innerHTML = '<tr><td colspan="3" class="py-12 text-center text-gray-500 italic">No master keys found.</td></tr>';
+                return;
+            }
+
+            table.innerHTML = keys.map(k => {
+                const statusColor = k.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                                   'bg-red-500/10 text-red-400 border-red-500/20';
+
+                return `
+                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <td class="py-4 px-4 font-medium text-purple-400">
+                        <div>${k.name}</div>
+                        <div class="text-[10px] text-gray-600 mt-1 uppercase tracking-wider">Universal Bypass Master</div>
+                    </td>
+                    <td class="py-4 px-4 text-xs font-mono">
+                        <span class="px-2 py-0.5 rounded-full border ${statusColor}">
+                            ${k.status.toUpperCase()}
+                        </span>
+                    </td>
+                    <td class="py-4 px-4 text-center">
+                        <div class="flex justify-center gap-2">
+                            <button onclick="copyToClipboard('${k.id}')" title="Copy Key" class="text-xs bg-white text-black font-bold px-3 py-1.5 rounded hover:bg-gray-200 transition-all">Copy</button>
+                            <button onclick="toggleAdminKeyStatus('${k.id}', '${k.status}')" class="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded transition-all">
+                                ${k.status === 'active' ? 'Revoke' : 'Activate'}
+                            </button>
+                            <button onclick="deleteAdminKey('${k.id}')" class="text-xs text-red-500 hover:text-red-400 px-3 py-1.5 rounded transition-colors">Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        async function generateAdminKey() {
+            const name = document.getElementById('adminKeyName').value.trim();
+            const pem = document.getElementById('privateKey').value.trim();
+
+            if (!name || !pem) return alert('Enter a name and ensure Private Key is loaded in Dashboard.');
+
+            try {
+                // Sign the key name (makes every key unique if the name is unique)
+                const sig = new KJUR.crypto.Signature({ "alg": "SHA256withRSA" });
+                sig.init(pem);
+                sig.updateString(name);
+                const sigValueBase64 = hextob64(sig.sign());
+
+                // Save to KV
+                const res = await fetch(`${API_URL}/api/admin/admin-keys`, {
+                    method: 'POST',
+                    headers: { 'Authorization': authToken, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: sigValueBase64, // The signature itself is the unique ID
+                        name: name,
+                        status: 'active'
+                    })
+                });
+
+                if (res.ok) {
+                    document.getElementById('targetShop').innerText = "ADMIN MASTER KEY";
+                    document.getElementById('generatedKeyDisplay').innerText = sigValueBase64;
+                    document.getElementById('resultModal').classList.remove('hidden');
+                    fetchAdminKeys();
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Admin key generation failed');
+            }
+        }
+
+        async function toggleAdminKeyStatus(id, currentStatus) {
+            const newStatus = currentStatus === 'active' ? 'revoked' : 'active';
+            if (!confirm(`Are you sure you want to ${newStatus.toUpperCase()} this Admin Key?`)) return;
+
+            await fetch(`${API_URL}/api/admin/admin-keys`, {
+                method: 'POST',
+                headers: { 'Authorization': authToken, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, status: newStatus })
+            });
+            fetchAdminKeys();
+        }
+
+        async function deleteAdminKey(id) {
+            if (!confirm('Permanently delete this Master Key entry?')) return;
+
+            await fetch(`${API_URL}/api/admin/admin-keys`, {
+                method: 'DELETE',
+                headers: { 'Authorization': authToken, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            fetchAdminKeys();
         }
     </script>
 </body>

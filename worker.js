@@ -3,16 +3,20 @@
  * This worker validates RSA signatures for the Shrine theme.
  */
 
+
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     // 1. Handle CORS Preflight (OPTIONS)
+    const origin = request.headers.get("Origin") || "*";
     const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": origin,
       "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With",
       "Access-Control-Max-Age": "86400",
+      "Access-Control-Allow-Credentials": "true"
     };
 
     if (request.method === "OPTIONS") {
@@ -74,7 +78,11 @@ async function handleAdmin(request, env, corsHeaders) {
         const licenses = [];
         for (const key of list.keys) {
           const val = await env.LICENSES.get(key.name);
-          licenses.push({ shop: key.name, ...JSON.parse(val) });
+          if (val) {
+            try {
+              licenses.push({ shop: key.name, ...JSON.parse(val) });
+            } catch (e) { /* skip malformed keys */ }
+          }
         }
         return new Response(JSON.stringify(licenses), {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -156,8 +164,62 @@ async function handleAdmin(request, env, corsHeaders) {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
+
+      }
+      
+      // -----------------------------------------------------------------------
+      // 3. ADMIN KEYS API (/api/admin/admin-keys)
+      // -----------------------------------------------------------------------
+      if (url.pathname === '/api/admin/admin-keys') {
+        // List Admin Keys
+        if (request.method === "GET") {
+          const list = await env.ADMIN_KEYS.list();
+          const keys = [];
+          for (const k of list.keys) {
+            const val = await env.ADMIN_KEYS.get(k.name);
+            if (val) {
+              try {
+                const data = JSON.parse(val);
+                keys.push({
+                  id: k.name,
+                  ...data
+                });
+              } catch(e) { /* skip corrupt keys */ }
+            }
+          }
+          return new Response(JSON.stringify(keys), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        // Create / Update Admin Key
+        if (request.method === "POST") {
+          const data = await request.json();
+          const id = data.id;
+          const existingRaw = await env.ADMIN_KEYS.get(id);
+          const existing = existingRaw ? JSON.parse(existingRaw) : {};
+
+          await env.ADMIN_KEYS.put(id, JSON.stringify({
+            name: data.name || existing.name || "Unnamed Admin Key",
+            status: data.status || existing.status || "active",
+            created: existing.created || new Date().toISOString()
+          }));
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+
+        // Delete Admin Key
+        if (request.method === "DELETE") {
+          const { id } = await request.json();
+          await env.ADMIN_KEYS.delete(id);
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          });
+        }
+      }
+
       return new Response('Not Found', { status: 404, headers: corsHeaders });
-    }
   } catch (e) {
     return new Response(JSON.stringify({ error: e.message, stack: e.stack }), {
       status: 500,
@@ -240,8 +302,40 @@ async function handleValidation(request, env, corsHeaders) {
       }
     }
 
-    // 2. If not found at all, it's an unregistered/deleted shop
+    // 2. If not found at all, it's potentially an unregistered shop OR an Admin Key
     if (!stored) {
+      // First, check if this is an active Admin Key Bypass
+      const adminStored = await env.ADMIN_KEYS.get(license);
+      if (adminStored) {
+        const adminData = JSON.parse(adminStored);
+        if (adminData.status === 'active') {
+          // Verify the signature (license) against the name it was generated for
+          const key = await importPublicKey(env.PUBLIC_KEY);
+          const signature = base64ToArray(license);
+          const isAdminValid = await crypto.subtle.verify(
+            { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+            key,
+            signature,
+            new TextEncoder().encode(adminData.name) // Verify against the stored Name
+          );
+
+          if (isAdminValid) {
+            console.log(`Admin Bypass triggered for name: ${adminData.name}`);
+            return jsonResponse({
+              status: 'active',
+              message: 'Shrine Theme License: ADMIN BYPASS ACTIVE',
+              details: { shop, authenticated: true, type: 'admin', adminName: adminData.name }
+            });
+          }
+        } else if (adminData.status === 'revoked') {
+          return jsonResponse({
+            "b": "body",
+            "h": getBlockHtml("Admin Key Revoked - This master key has been deactivated.", "Revoked")
+          }, 201);
+        }
+      }
+
+      // If not an admin key, then it's really unregistered
       return jsonResponse({
         "b": "body",
         "h": getBlockHtml("Unregistered Instance - This shop domain is not found in our license database. Please contact support.", "Unregistered")
@@ -262,6 +356,7 @@ async function handleValidation(request, env, corsHeaders) {
     }
   }
 
+  // 6. Signature Verification (Standard Domain Check)
   try {
     const publicKeyPem = env.PUBLIC_KEY;
     if (!publicKeyPem) {
@@ -270,9 +365,8 @@ async function handleValidation(request, env, corsHeaders) {
 
     const key = await importPublicKey(publicKeyPem);
     const encoder = new TextEncoder();
-    const data = encoder.encode(shop);
     const signature = base64ToArray(license);
-
+    const data = encoder.encode(shop);
     const isValid = await crypto.subtle.verify(
       { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
       key,
