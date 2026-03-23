@@ -387,7 +387,8 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ..."
                     document.getElementById('targetShop').innerText = shop;
                     document.getElementById('generatedKeyDisplay').innerText = sigValueBase64;
                     document.getElementById('resultModal').classList.remove('hidden');
-                    fetchLicenses();
+                    // Small delay to allow KV list consistency to catch up
+                    setTimeout(fetchLicenses, 1500);
                 }
 
             } catch (err) {
@@ -526,7 +527,8 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ..."
                     document.getElementById('targetShop').innerText = "ADMIN MASTER KEY";
                     document.getElementById('generatedKeyDisplay').innerText = sigValueBase64;
                     document.getElementById('resultModal').classList.remove('hidden');
-                    fetchAdminKeys();
+                    // Small delay to allow KV list consistency to catch up
+                    setTimeout(fetchAdminKeys, 1500);
                 }
             } catch (err) {
                 console.error(err);
