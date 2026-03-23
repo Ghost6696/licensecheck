@@ -212,7 +212,28 @@
                 return;
             }
 
-            table.innerHTML = licenses.map(lic => {
+            // Grouping Logic
+            const primaries = licenses.filter(l => l.type !== 'alias');
+            const aliases = licenses.filter(l => l.type === 'alias');
+
+            // Sort primaries by newest first
+            primaries.sort((a, b) => new Date(b.created) - new Date(a.created));
+
+            const sortedList = [];
+            primaries.forEach(p => {
+                sortedList.push(p);
+                // Find and sort aliases for this primary
+                const matching = aliases.filter(a => a.target === p.shop);
+                matching.sort((a, b) => a.shop.localeCompare(b.shop));
+                sortedList.push(...matching);
+            });
+
+            // Catch any orphan aliases
+            const matchedAliasShops = new Set(sortedList.filter(l => l.type === 'alias').map(l => l.shop));
+            const orphans = aliases.filter(a => !matchedAliasShops.has(a.shop));
+            sortedList.push(...orphans);
+
+            table.innerHTML = sortedList.map(lic => {
                 const isAlias = lic.type === 'alias';
                 const status = (lic.status || 'alias').toUpperCase();
                 const statusColor = lic.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
@@ -220,11 +241,14 @@
                                   'bg-red-500/10 text-red-400 border-red-500/20';
 
                 return `
-                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors">
-                    <td class="py-4 px-4 font-medium text-blue-400">
-                        ${lic.shop}
-                        <div class="text-[10px] text-gray-600 mt-1">
-                            ${isAlias ? `↳ Points to: ${lic.target}` : new Date(lic.created).toLocaleString()}
+                <tr class="border-b border-white/5 hover:bg-white/5 transition-colors ${isAlias ? 'bg-white/[0.02]' : ''}">
+                    <td class="py-4 px-4 font-medium text-blue-400 ${isAlias ? 'pl-10' : ''}">
+                        <div class="flex items-center gap-2">
+                             ${isAlias ? '<span class="text-gray-500 font-bold">↳</span>' : ''}
+                             <span class="${isAlias ? 'text-blue-300/80 text-sm' : ''}">${lic.shop}</span>
+                        </div>
+                        <div class="text-[10px] text-gray-600 mt-1 whitespace-nowrap">
+                            ${isAlias ? `Connected to: ${lic.target}` : new Date(lic.created).toLocaleString()}
                         </div>
                     </td>
                     <td class="py-4 px-4 text-xs font-mono">
@@ -240,7 +264,9 @@
                                 <button onclick="toggleStatus('${lic.shop}', '${lic.status}')" class="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded transition-all">
                                     ${lic.status === 'active' ? 'Revoke' : 'Activate'}
                                 </button>
-                            ` : ''}
+                            ` : `
+                                <span class="text-[10px] text-gray-700 italic px-2 py-1.5 bg-white/5 rounded min-w-[170px] inline-block">Managed via Primary</span>
+                            `}
                             <button onclick="deleteLicense('${lic.shop}')" class="text-xs text-red-500 hover:text-red-400 px-3 py-1.5 rounded">Delete</button>
                         </div>
                     </td>
