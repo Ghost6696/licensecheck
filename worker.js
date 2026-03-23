@@ -16,50 +16,54 @@ export default {
     };
 
     if (request.method === "OPTIONS") {
-      return new Response(null, {
-        headers: corsHeaders,
+      return new Response(null, { headers: corsHeaders });
+    }
+
+    try {
+      // Only handle the specific endpoint
+      if (url.pathname === '/api/updates/check') {
+        return await handleValidation(request, env, corsHeaders);
+      }
+
+      if (url.pathname.startsWith('/api/admin/')) {
+        return await handleAdmin(request, env, corsHeaders);
+      }
+
+      return new Response('Not Found', { status: 404, headers: corsHeaders });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message, stack: e.stack }), { 
+        status: 500, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
-
-    // Only handle the specific endpoint
-    if (url.pathname === '/api/updates/check') {
-      return await handleValidation(request, env, corsHeaders);
-    }
-
-    if (url.pathname.startsWith('/api/admin/')) {
-      return await handleAdmin(request, env, corsHeaders);
-    }
-
-    return new Response('Not Found', { status: 404 });
   }
 };
 
 async function handleAdmin(request, env, corsHeaders) {
-  const url = new URL(request.url);
-  const auth = request.headers.get("Authorization");
-  const adminPassword = env.ADMIN_PASSWORD || "shrine123"; // Default if not set
+  try {
+    const url = new URL(request.url);
+    const auth = request.headers.get("Authorization");
+    const adminPassword = env.ADMIN_PASSWORD || "shrine123";
 
-  // Simple basic auth check (Password in Authorization header)
-  if (auth !== adminPassword && url.pathname !== '/api/admin/login') {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { 
-      status: 401, 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
-  }
-
-  // 1. Login Endpoint
-  if (url.pathname === '/api/admin/login') {
-    const { password } = await request.json();
-    if (password === adminPassword) {
-      return new Response(JSON.stringify({ success: true, token: adminPassword }), { 
+    if (auth !== adminPassword && url.pathname !== '/api/admin/login') {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { 
+        status: 401, 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
-    return new Response(JSON.stringify({ error: "Invalid password" }), { 
-      status: 401, 
-      headers: { ...corsHeaders, "Content-Type": "application/json" } 
-    });
-  }
+
+    if (url.pathname === '/api/admin/login') {
+      const { password } = await request.json();
+      if (password === adminPassword) {
+        return new Response(JSON.stringify({ success: true, token: adminPassword }), { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+      return new Response(JSON.stringify({ error: "Invalid password" }), { 
+        status: 401, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
 
   // 2. Licenses Endpoint (CRUD)
   if (url.pathname === '/api/admin/licenses') {
@@ -122,9 +126,14 @@ async function handleAdmin(request, env, corsHeaders) {
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
+      return new Response('Not Found', { status: 404, headers: corsHeaders });
+    }
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e.message, stack: e.stack }), { 
+      status: 500, 
+      headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
   }
-
-  return new Response('Not Found', { status: 404 });
 }
 
 async function handleValidation(request, env, corsHeaders) {
