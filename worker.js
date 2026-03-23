@@ -131,8 +131,28 @@ async function handleAdmin(request, env, corsHeaders) {
       // Delete / Revoke
       if (request.method === "DELETE") {
         const { shop } = await request.json();
+
+        // 1. Cascading Delete: Find all aliases pointing to this shop
+        // We list all keys (efficient for < 1000 keys)
+        const list = await env.LICENSES.list();
+        for (const key of list.keys) {
+          const val = await env.LICENSES.get(key.name);
+          if (val) {
+            try {
+              const data = JSON.parse(val);
+              if (data.type === 'alias' && data.target === shop) {
+                await env.LICENSES.delete(key.name);
+                console.log(`Cascading delete: Alias ${key.name} removed (target: ${shop})`);
+              }
+            } catch (e) {
+              console.error(`Error processing cascading delete for ${key.name}:`, e);
+            }
+          }
+        }
+
+        // 2. Delete the primary shop
         await env.LICENSES.delete(shop);
-        return new Response(JSON.stringify({ success: true }), {
+        return new Response(JSON.stringify({ success: true, cascading: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }

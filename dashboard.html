@@ -235,10 +235,18 @@
 
             table.innerHTML = sortedList.map(lic => {
                 const isAlias = lic.type === 'alias';
-                const status = (lic.status || 'alias').toUpperCase();
-                const statusColor = lic.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
-                                  isAlias ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 
-                                  'bg-red-500/10 text-red-400 border-red-500/20';
+                
+                // For aliases, dynamically find the primary's status
+                let effectiveStatus = (lic.status || 'active').toLowerCase();
+                if (isAlias) {
+                    const primary = primaries.find(p => p.shop === lic.target);
+                    effectiveStatus = primary ? (primary.status || 'active').toLowerCase() : 'orphan';
+                }
+
+                const status = (isAlias && effectiveStatus === 'active') ? 'ALIAS' : effectiveStatus.toUpperCase();
+                const statusColor = effectiveStatus === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 
+                                  effectiveStatus === 'revoked' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                                  'bg-blue-500/10 text-blue-400 border-blue-500/20';
 
                 return `
                 <tr class="border-b border-white/5 hover:bg-white/5 transition-colors ${isAlias ? 'bg-white/[0.02]' : ''}">
@@ -265,9 +273,9 @@
                                     ${lic.status === 'active' ? 'Revoke' : 'Activate'}
                                 </button>
                             ` : `
-                                <span class="text-[10px] text-gray-700 italic px-2 py-1.5 bg-white/5 rounded min-w-[170px] inline-block">Managed via Primary</span>
+                                <span class="text-[10px] text-gray-700 italic px-2 py-1.5 bg-white/5 rounded min-w-[170px] inline-block text-center">Managed via Primary</span>
                             `}
-                            <button onclick="deleteLicense('${lic.shop}')" class="text-xs text-red-500 hover:text-red-400 px-3 py-1.5 rounded">Delete</button>
+                            <button onclick="deleteLicense('${lic.shop}')" class="text-xs text-red-500 hover:text-red-400 px-3 py-1.5 rounded transition-colors">Delete</button>
                         </div>
                     </td>
                 </tr>
