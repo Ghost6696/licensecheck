@@ -189,9 +189,26 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ..."
         </div>
     </div>
 
+    <!-- Modal for Viewing Stores -->
+    <div id="storesModal"
+        class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50">
+        <div class="max-w-md w-full glass p-8 rounded-3xl border border-white/10">
+            <h3 class="text-xl font-bold mb-2">Connected Stores</h3>
+            <p class="text-sm text-gray-400 mb-6">Key: <span id="storesModalName" class="text-white font-bold"></span></p>
+            
+            <div id="storesListContainer" class="bg-black/50 p-4 rounded-xl border border-white/10 mb-6 max-h-64 overflow-y-auto">
+                <!-- Stores injected here -->
+            </div>
+            
+            <button onclick="closeStoresModal()"
+                    class="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition-all">Close</button>
+        </div>
+    </div>
+
     <script>
         let authToken = localStorage.getItem('shrine_token');
         const API_URL = 'https://shrine-auther.fantoma.workers.dev'; // Leave blank if hosted on same domain as worker
+        let currentAdminKeys = [];
 
 
         // Init
@@ -458,6 +475,7 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ..."
                     headers: { 'Authorization': authToken }
                 });
                 const keys = await res.json();
+                currentAdminKeys = keys;
                 renderAdminKeys(keys);
             } catch (e) {
                 console.error('Failed to fetch admin keys');
@@ -493,6 +511,7 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ..."
                                 ${k.status === 'active' ? 'Revoke' : 'Activate'}
                             </button>
                             <button onclick="deleteAdminKey('${k.id}')" class="text-xs text-red-500 hover:text-red-400 px-3 py-1.5 rounded transition-colors">Delete</button>
+                            <button onclick="viewStores('${k.id}')" class="text-xs bg-blue-500/20 text-blue-400 hover:bg-blue-500/40 border border-blue-500/30 px-3 py-1.5 rounded transition-colors">Stores</button>
                         </div>
                     </td>
                 </tr>
@@ -557,6 +576,27 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQ..."
                 body: JSON.stringify({ id })
             });
             fetchAdminKeys();
+        }
+
+        function viewStores(id) {
+            const key = currentAdminKeys.find(k => k.id === id);
+            if (!key) return;
+            
+            document.getElementById('storesModalName').innerText = key.name;
+            const shops = key.used_on_shops || [];
+            const container = document.getElementById('storesListContainer');
+            
+            if (shops.length === 0) {
+                container.innerHTML = '<div class="text-gray-500 italic text-center py-6">No stores have actively used this key yet.</div>';
+            } else {
+                container.innerHTML = shops.map(shop => `<div class="bg-white/5 p-3 rounded border border-white/10 mb-2 font-mono text-sm break-all">${shop}</div>`).join('');
+            }
+            
+            document.getElementById('storesModal').classList.remove('hidden');
+        }
+
+        function closeStoresModal() {
+            document.getElementById('storesModal').classList.add('hidden');
         }
     </script>
 </body>
